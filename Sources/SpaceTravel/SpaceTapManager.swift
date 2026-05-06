@@ -5,6 +5,11 @@ import Cocoa
 /// Long presses trigger `onLongPress` and suppress the key event.
 class SpaceTapManager {
     var onLongPress: (() -> Void)?
+    var onActiveChanged: ((Bool) -> Void)?
+
+    private(set) var isActive = false {
+        didSet { if isActive != oldValue { onActiveChanged?(isActive) } }
+    }
 
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -19,7 +24,8 @@ class SpaceTapManager {
 
     var triggerKeyCode: CGKeyCode = 49
     var isSuspended = false
-    private let longPressDuration: TimeInterval = 0.5
+    private let longPressInitial: TimeInterval = 0.3
+    private let longPressRepeat: TimeInterval = 0.6
 
     func start() {
         requestAccessibilityAndStart()
@@ -71,6 +77,7 @@ class SpaceTapManager {
 
         self.eventTap = tap
         self.runLoopSource = source
+        isActive = true
         print("SpaceTravel: event tap active.")
     }
 
@@ -109,7 +116,7 @@ class SpaceTapManager {
             pendingKeyDown = event.copy()
             longPressDidFire = false
             longPressTimer?.invalidate()
-            longPressTimer = Timer.scheduledTimer(withTimeInterval: longPressDuration, repeats: false) { [weak self] _ in
+            longPressTimer = Timer.scheduledTimer(withTimeInterval: longPressInitial, repeats: false) { [weak self] _ in
                 self?.fireLongPress()
             }
             return nil // Consume; decision pending.
@@ -144,7 +151,7 @@ class SpaceTapManager {
         pendingKeyDown = nil
         onLongPress?()
         // Reschedule so the switch repeats while the key stays held.
-        longPressTimer = Timer.scheduledTimer(withTimeInterval: longPressDuration, repeats: false) { [weak self] _ in
+        longPressTimer = Timer.scheduledTimer(withTimeInterval: longPressRepeat, repeats: false) { [weak self] _ in
             self?.fireLongPress()
         }
     }

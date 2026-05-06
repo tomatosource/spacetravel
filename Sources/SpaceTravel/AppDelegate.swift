@@ -41,6 +41,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func rebuildMenu() {
         let menu = NSMenu()
 
+        // Status row — not clickable, just informational.
+        let statusTitle = (tapManager?.isActive == true)
+            ? "● Active"
+            : "○ Waiting for Accessibility…"
+        let tapStatusItem = NSMenuItem(title: statusTitle, action: nil, keyEquivalent: "")
+        tapStatusItem.isEnabled = false
+        menu.addItem(tapStatusItem)
+
+        menu.addItem(.separator())
+
         let keyItem = NSMenuItem(
             title: "Trigger Key: \(triggerKeyName)",
             action: #selector(changeTriggerKey),
@@ -124,6 +134,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         tapManager.triggerKeyCode = triggerKeyCode
         tapManager.onLongPress = {
             AppSwitcher.switchApps()
+        }
+        tapManager.onActiveChanged = { [weak self] _ in
+            DispatchQueue.main.async { self?.rebuildMenu() }
         }
         tapManager.start()
     }
