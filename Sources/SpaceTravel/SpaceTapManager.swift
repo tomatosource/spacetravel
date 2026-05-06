@@ -1,8 +1,5 @@
 import Cocoa
 
-/// Intercepts Space key events via CGEventTap.
-/// Short presses (< longPressDuration) are passed through transparently.
-/// Long presses trigger `onLongPress` and suppress the key event.
 class SpaceTapManager {
     var onLongPress: (() -> Void)?
     var onActiveChanged: ((Bool) -> Void)?
@@ -14,24 +11,28 @@ class SpaceTapManager {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
-    private var longPressTimer: Timer?
-    private var pendingKeyDown: CGEvent?
-    private var longPressDidFire = false
+    // MARK: - State
 
-    // Counter of synthetic space events we posted; used to pass them through
-    // without re-processing.
-    private var syntheticEventsRemaining = 0
+    // True while the trigger key is held and we haven't yet decided short vs long.
+    private var isBuffering = false
+    // True once the long-press threshold has fired (including during repeats).
+    private var longPressDidFire = false
+    // All events (including the trigger keydown itself) buffered during the hold window.
+    private var eventQueue: [CGEvent] = []
+    private var longPressTimer: Timer?
 
     var triggerKeyCode: CGKeyCode = 49
     var isSuspended = false
-    private let longPressInitial: TimeInterval = 0.3
-    private let longPressRepeat: TimeInterval = 0.6
 
-    func start() {
-        requestAccessibilityAndStart()
-    }
+    private let longPressInitial: TimeInterval = 0.2
+    private let longPressRepeat:  TimeInterval = 0.6
 
-    // MARK: - Setup
+    // Stamp we write onto copies we post so the tap passes them through.
+    private let syntheticMark: Int64 = 0x535400   // "ST\0"
+
+    // MARK: - Start
+
+    func start() { requestAccessibilityAndStart() }
 
     private func requestAccessibilityAndStart() {
         let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
@@ -74,33 +75,37 @@ class SpaceTapManager {
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-
         self.eventTap = tap
         self.runLoopSource = source
         isActive = true
         print("SpaceTravel: event tap active.")
     }
 
-    // MARK: - Event handling (called on main thread via main RunLoop)
+    // MARK: - Event handling (main thread via main RunLoop)
 
     func handle(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        // Re-arm if the system disabled our tap.
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap = eventTap { CGEvent.tapEnable(tap: tap, enable: true) }
             return nil
         }
 
-        // Pass everything through while capturing a new key assignment.
         if isSuspended { return Unmanaged.passRetained(event) }
 
-        let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
-        guard keyCode == triggerKeyCode else {
+        // Pass through events we replayed.
+        if event.getIntegerValueField(.eventSourceUserData) == syntheticMark {
             return Unmanaged.passRetained(event)
         }
 
-        // Pass through synthetic events we injected.
-        if syntheticEventsRemaining > 0 {
-            syntheticEventsRemaining -= 1
+        let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+
+        // While buffering, queue every non-trigger event so ordering is preserved
+        // when we replay on short-press.
+        if isBuffering && keyCode != triggerKeyCode {
+            if let copy = event.copy() { eventQueue.append(copy) }
+            return nil
+        }
+
+        guard keyCode == triggerKeyCode else {
             return Unmanaged.passRetained(event)
         }
 
@@ -108,60 +113,79 @@ class SpaceTapManager {
         case .keyDown:
             let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
             if isRepeat {
-                // Suppress key-repeat during long-press window or after long press fired.
-                return (longPressTimer != nil || longPressDidFire) ? nil : Unmanaged.passRetained(event)
+                // Suppress repeats during buffering or after long press fired.
+                return (isBuffering || longPressDidFire) ? nil : Unmanaged.passRetained(event)
             }
 
-            // Fresh keydown: store and start timer.
-            pendingKeyDown = event.copy()
+            // Fresh trigger keydown — start buffering everything.
+            eventQueue = []
+            if let copy = event.copy() { eventQueue.append(copy) }
+            isBuffering = true
             longPressDidFire = false
             longPressTimer?.invalidate()
-            longPressTimer = Timer.scheduledTimer(withTimeInterval: longPressInitial, repeats: false) { [weak self] _ in
-                self?.fireLongPress()
-            }
-            return nil // Consume; decision pending.
+            longPressTimer = Timer.scheduledTimer(
+                withTimeInterval: longPressInitial, repeats: false
+            ) { [weak self] _ in self?.fireLongPress() }
+            return nil
 
         case .keyUp:
-            if !longPressDidFire, let timer = longPressTimer, timer.isValid {
-                // Short press: cancel timer and replay both events.
-                timer.invalidate()
-                longPressTimer = nil
-                let savedDown = pendingKeyDown
-                pendingKeyDown = nil
-                replayShortPress(keyDown: savedDown, keyUp: event)
-                return nil // Consume original; we're replaying.
-            } else {
-                // Long press was handled; cancel any pending repeat timer.
+            if isBuffering {
+                // Short press: append the keyup and replay the whole queue in order.
+                isBuffering = false
                 longPressTimer?.invalidate()
                 longPressTimer = nil
-                pendingKeyDown = nil
+                if let copy = event.copy() { eventQueue.append(copy) }
+                flushQueue()
+            } else {
+                // Long-press keyup: just clean up.
+                longPressTimer?.invalidate()
+                longPressTimer = nil
                 longPressDidFire = false
-                return nil
             }
+            return nil
 
         default:
             return Unmanaged.passRetained(event)
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Long press
 
     private func fireLongPress() {
+        isBuffering = false
         longPressDidFire = true
-        pendingKeyDown = nil
+
+        // Replay any non-trigger events that accumulated before the threshold fired
+        // (user typed something else while holding the trigger).
+        let spillover = eventQueue.filter {
+            CGKeyCode($0.getIntegerValueField(.keyboardEventKeycode)) != triggerKeyCode
+        }
+        eventQueue = []
+        if !spillover.isEmpty { replay(spillover) }
+
         onLongPress?()
-        // Reschedule so the switch repeats while the key stays held.
-        longPressTimer = Timer.scheduledTimer(withTimeInterval: longPressRepeat, repeats: false) { [weak self] _ in
-            self?.fireLongPress()
+
+        longPressTimer = Timer.scheduledTimer(
+            withTimeInterval: longPressRepeat, repeats: false
+        ) { [weak self] _ in self?.fireLongPress() }
+    }
+
+    // MARK: - Replay helpers
+
+    private func flushQueue() {
+        let q = eventQueue
+        eventQueue = []
+        replay(q)
+    }
+
+    private func replay(_ events: [CGEvent]) {
+        for e in events {
+            e.setIntegerValueField(.eventSourceUserData, value: syntheticMark)
+            e.post(tap: .cghidEventTap)
         }
     }
 
-    private func replayShortPress(keyDown: CGEvent?, keyUp: CGEvent) {
-        // Account for both events so the tap passes them through.
-        syntheticEventsRemaining = (keyDown != nil ? 1 : 0) + 1
-        keyDown?.post(tap: .cghidEventTap)
-        keyUp.post(tap: .cghidEventTap)
-    }
+    // MARK: - Teardown
 
     deinit {
         longPressTimer?.invalidate()
@@ -170,7 +194,6 @@ class SpaceTapManager {
     }
 }
 
-// C-compatible callback — cannot be a method or closure.
 private func spaceTapCallback(
     proxy: CGEventTapProxy,
     type: CGEventType,

@@ -15,8 +15,17 @@ mkdir -p "${APP}/Contents/Resources"
 cp "${BUILD_DIR}/${PRODUCT}" "${APP}/Contents/MacOS/"
 cp "Info.plist" "${APP}/Contents/"
 
-# Ad-hoc sign so macOS will run it and SMAppService works.
-codesign -s - --force "${APP}"
+# Sign with a persistent local cert so macOS doesn't revoke Accessibility on each build.
+# One-time setup: Keychain Access → Certificate Assistant → Create a Certificate
+#   Name: SpaceTravel Dev | Identity Type: Self Signed Root | Type: Code Signing
+CERT="SpaceTravel Dev"
+if security find-identity -v -p codesigning 2>/dev/null | grep -q "\"${CERT}\""; then
+    codesign -s "${CERT}" --force "${APP}"
+else
+    echo "⚠️  '${CERT}' cert not found — falling back to ad-hoc signing."
+    echo "   You'll need to re-grant Accessibility after each build until the cert exists."
+    codesign -s - --force "${APP}"
+fi
 
 echo ""
 echo "Built ${APP}"
