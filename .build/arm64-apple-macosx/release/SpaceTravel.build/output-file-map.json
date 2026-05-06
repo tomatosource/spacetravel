@@ -1,0 +1,37 @@
+{
+  "": {
+    "dependencies": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/SpaceTravel.d",
+    "object": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/SpaceTravel.o",
+    "swift-dependencies": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/master.swiftdeps"
+  },
+  "/Users/geoff/g/src/github.com/tomatosource/spacetravel/Sources/SpaceTravel/AppDelegate.swift": {
+    "object": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/AppDelegate.swift.o",
+    "swiftmodule": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/AppDelegate~partial.swiftmodule",
+    "swift-dependencies": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/AppDelegate.swiftdeps",
+    "diagnostics": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/AppDelegate.dia"
+  },
+  "/Users/geoff/g/src/github.com/tomatosource/spacetravel/Sources/SpaceTravel/AppSwitcher.swift": {
+    "object": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/AppSwitcher.swift.o",
+    "swiftmodule": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/AppSwitcher~partial.swiftmodule",
+    "swift-dependencies": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/AppSwitcher.swiftdeps",
+    "diagnostics": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/AppSwitcher.dia"
+  },
+  "/Users/geoff/g/src/github.com/tomatosource/spacetravel/Sources/SpaceTravel/KeyCaptureWindowController.swift": {
+    "object": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/KeyCaptureWindowController.swift.o",
+    "swiftmodule": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/KeyCaptureWindowController~partial.swiftmodule",
+    "swift-dependencies": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/KeyCaptureWindowController.swiftdeps",
+    "diagnostics": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/KeyCaptureWindowController.dia"
+  },
+  "/Users/geoff/g/src/github.com/tomatosource/spacetravel/Sources/SpaceTravel/SpaceTapManager.swift": {
+    "object": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/SpaceTapManager.swift.o",
+    "swiftmodule": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/SpaceTapManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/SpaceTapManager.swiftdeps",
+    "diagnostics": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/SpaceTapManager.dia"
+  },
+  "/Users/geoff/g/src/github.com/tomatosource/spacetravel/Sources/SpaceTravel/main.swift": {
+    "object": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/main.swift.o",
+    "swiftmodule": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/main.swiftdeps",
+    "diagnostics": "/Users/geoff/g/src/github.com/tomatosource/spacetravel/.build/arm64-apple-macosx/release/SpaceTravel.build/main.dia"
+  }
+}
